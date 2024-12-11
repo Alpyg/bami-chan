@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  bot:
+    image: 10.147.20.18:10000/bami
+    env_file: ".env"
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.hostname == nexus
