@@ -28,8 +28,8 @@ impl StopCommand {
         );
 
         if let Some(call_lock) = ctx.songbird.get(guild_id) {
-            let mut call = call_lock.lock().await;
-            call.stop();
+            let call = call_lock.lock().await;
+            call.queue().stop();
         }
 
         let response = InteractionResponse {
