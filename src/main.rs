@@ -4,23 +4,22 @@ use std::{
     collections::HashMap,
     env,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, RwLock,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use dotenv::dotenv;
 use process::process_interactions;
-use songbird::{shards::TwilightMap, tracks::TrackHandle, Songbird};
+use songbird::{Songbird, shards::TwilightMap, tracks::TrackHandle};
 use tracing::Level;
 use twilight_cache_inmemory::{InMemoryCache, InMemoryCacheBuilder, ResourceType};
 use twilight_gateway::{
-    error::ReceiveMessageErrorType, stream::create_recommended, CloseFrame, ConfigBuilder, Event,
-    Intents, Shard,
+    CloseFrame, ConfigBuilder, Event, EventTypeFlags, Intents, Shard, StreamExt, create_recommended,
 };
 use twilight_http::Client as HttpClient;
 use twilight_interactions::command::CreateCommand;
-use twilight_model::id::{marker::GuildMarker, Id};
+use twilight_model::id::{Id, marker::GuildMarker};
 use twilight_standby::Standby;
 
 mod music;
@@ -133,22 +132,16 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn runner(mut shard: Shard, ctx: Context) {
-    loop {
-        let event = match shard.next_event().await {
-            Ok(Event::GatewayClose(_)) if SHUTDOWN.load(Ordering::Relaxed) => break,
-            Ok(event) => event,
-            Err(error)
-                if SHUTDOWN.load(Ordering::Relaxed)
-                    && matches!(error.kind(), ReceiveMessageErrorType::Io) =>
-            {
-                break;
-            }
-
-            Err(error) => {
-                tracing::warn!(?error, "error whyile receiving event");
-                continue;
-            }
+    while let Some(event) = shard.next_event(EventTypeFlags::all()).await {
+        let Ok(event) = event else {
+            tracing::warn!(source = ?event.unwrap_err(), "error recceiving event");
+            continue;
         };
+
+        match event {
+            Event::GatewayClose(_) if SHUTDOWN.load(Ordering::Relaxed) => break,
+            _ => {}
+        }
 
         ctx.cache.update(&event);
         ctx.songbird.process(&event).await;

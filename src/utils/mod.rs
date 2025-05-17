@@ -1,5 +1,3 @@
-pub mod time;
-
 pub fn to_timestamp(t: u64) -> String {
     let sec = (t % 60) as u8;
     let min = ((t / 60) % 60) as u8;

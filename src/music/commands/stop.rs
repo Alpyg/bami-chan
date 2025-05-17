@@ -1,7 +1,7 @@
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_mention::Mention;
 use twilight_model::{
-    application::interaction::{application_command::CommandData, Interaction},
+    application::interaction::{Interaction, application_command::CommandData},
     http::interaction::{InteractionResponse, InteractionResponseType},
 };
 use twilight_util::builder::InteractionResponseDataBuilder;
@@ -10,7 +10,7 @@ use crate::Context;
 
 #[derive(Debug, CommandModel, CreateCommand)]
 #[command(name = "stop", desc = "Stop and remove all tracks from the queue.")]
-pub struct StopCommand {}
+pub struct StopCommand;
 
 impl StopCommand {
     pub async fn handle(

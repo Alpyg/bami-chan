@@ -1,7 +1,7 @@
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_mention::Mention;
 use twilight_model::{
-    application::interaction::{application_command::CommandData, Interaction},
+    application::interaction::{Interaction, application_command::CommandData},
     http::interaction::{InteractionResponse, InteractionResponseType},
 };
 use twilight_util::builder::InteractionResponseDataBuilder;
@@ -10,7 +10,7 @@ use crate::Context;
 
 #[derive(Debug, CommandModel, CreateCommand)]
 #[command(name = "skip", desc = "Skip the current track.")]
-pub struct SkipCommand {}
+pub struct SkipCommand;
 
 impl SkipCommand {
     pub async fn handle(

@@ -2,26 +2,26 @@
 name = "bami"
 description = "Bami-chan discord bot."
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-anyhow = "1.0.89"
-async-trait = "0.1.82"
+anyhow = "1.0.98"
+async-trait = "0.1.88"
 dotenv = "0.15.0"
-regex = "1.10.6"
-reqwest = "0.12.7"
+regex = "1.11.1"
+reqwest = "0.12.15"
 songbird = { git = "https://github.com/serenity-rs/songbird", branch = "next", features = ["gateway", "twilight", "rustls", "driver", "builtin-queue"] }
-tokio = { version = "1.40.0", features = ["full"] }
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["std", "fmt", "ansi"], default-features = false }
-twilight-cache-inmemory = "0.15.4"
-twilight-gateway = { version = "0.15.4", default-features = false, features = ["native", "zlib-stock", "twilight-http"] }
-twilight-http = { version = "0.15.4", default-features = false, features = ["native"] }
-twilight-interactions = "0.15.2"
-twilight-mention = "0.15.3"
-twilight-model = "0.15.4"
-twilight-standby = "0.15.4"
-twilight-util = { version = "0.15.4", features = ["builder", "full"] }
+tokio = { version = "1.45.0", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["std", "fmt", "ansi"], default-features = false }
+twilight-cache-inmemory = "0.16.0"
+twilight-gateway = "0.16.0"
+twilight-http = "0.16.0"
+twilight-interactions = "0.16.2"
+twilight-mention = "0.16.0"
+twilight-model = "0.16.0"
+twilight-standby = "0.16.0"
+twilight-util = { version = "0.16.0", features = ["builder", "full"] }
 
 [dependencies.symphonia]
 version = "0.5.4"

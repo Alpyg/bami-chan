@@ -3,25 +3,25 @@ use std::process::Command;
 use anyhow::bail;
 use regex::Regex;
 use songbird::{
-    input::{Compose, YoutubeDl},
     Event, TrackEvent,
+    input::{Compose, YoutubeDl},
 };
 use twilight_interactions::command::{CommandModel, CreateCommand};
 use twilight_mention::Mention;
 use twilight_model::{
-    application::interaction::{application_command::CommandData, Interaction},
+    application::interaction::{Interaction, application_command::CommandData},
     http::interaction::{InteractionResponse, InteractionResponseType},
-    id::{marker::UserMarker, Id},
+    id::{Id, marker::UserMarker},
 };
 use twilight_util::{
     builder::{
-        embed::{EmbedBuilder, ImageSource},
         InteractionResponseDataBuilder,
+        embed::{EmbedBuilder, ImageSource},
     },
     snowflake::Snowflake,
 };
 
-use crate::{music::events::TrackPlayableHandler, Context};
+use crate::{Context, music::events::TrackPlayableHandler};
 
 #[derive(Debug, CommandModel, CreateCommand)]
 #[command(name = "play", desc = "Add a track to the queue.")]
@@ -61,35 +61,35 @@ impl PlayCommand {
             )
             .is_none()
         {
-            if let Some(voice_state) = ctx
+            let Some(voice_state) = ctx
                 .cache
                 .voice_state(interaction.author_id().unwrap(), guild_id)
-            {
-                let channel_id = voice_state.channel_id();
-
-                tracing::debug!("joining voice channel {} in guild {}", channel_id, guild_id);
-
-                match ctx.songbird.join(guild_id, channel_id).await {
-                    Ok(_) => {}
-                    Err(error) => {
-                        tracing::error!(?error, "join voice channel");
-                        client
-                            .update_response(&interaction.token)
-                            .content(Some("Failed to join voice channel"))?
-                            .await?;
-
-                        bail!(error);
-                    }
-                }
-            } else {
+            else {
                 tracing::error!("You are not in a voice channel {}", guild_id);
 
                 client
                     .update_response(&interaction.token)
-                    .content(Some("You are not in a voice channel"))?
+                    .content(Some("You are not in a voice channel"))
                     .await?;
 
                 bail!("You are not in a voice channel");
+            };
+
+            let channel_id = voice_state.channel_id();
+
+            tracing::debug!("joining voice channel {} in guild {}", channel_id, guild_id);
+
+            match ctx.songbird.join(guild_id, channel_id).await {
+                Ok(_) => {}
+                Err(error) => {
+                    tracing::error!(?error, "join voice channel");
+                    client
+                        .update_response(&interaction.token)
+                        .content(Some("Failed to join voice channel"))
+                        .await?;
+
+                    bail!(error);
+                }
             }
         };
 
@@ -125,60 +125,60 @@ impl PlayCommand {
         }
 
         for src in to_queue.iter_mut() {
-            if let Ok(metadata) = src.aux_metadata().await {
-                if let Some(call_lock) = ctx.songbird.get(guild_id) {
-                    let track;
-                    {
-                        let mut call = call_lock.lock().await;
-                        track = call.enqueue_input(src.clone().into()).await;
-                    }
-
-                    ctx.client
-                        .create_message(interaction.channel.as_ref().unwrap().id)
-                        .embeds(&vec![EmbedBuilder::new()
-                            .color(0xf04628)
-                            .title(metadata.title.as_ref().unwrap())
-                            .url(metadata.source_url.as_ref().unwrap())
-                            .thumbnail(
-                                ImageSource::url(metadata.thumbnail.as_ref().unwrap()).unwrap(),
-                            )
-                            .description(format!(
-                                "Requested by {}",
-                                interaction.author().unwrap().mention(),
-                            ))
-                            .build()])
-                        .unwrap()
-                        .await
-                        .unwrap();
-
-                    track
-                        .add_event(
-                            Event::Track(TrackEvent::Playable),
-                            TrackPlayableHandler {
-                                channel_id: interaction.channel.as_ref().unwrap().id,
-                                metadata: metadata.clone(),
-                                user: interaction.author().unwrap().id,
-                                ctx: ctx.clone(),
-                            },
-                        )
-                        .unwrap();
-
-                    tracing::info!("Queued track {}", &metadata.title.unwrap())
-                } else {
-                    tracing::error!("Bami is not in a voice channel");
-                    bail!("Bami is not in a voice channel");
-                }
-            } else {
+            let Ok(metadata) = src.aux_metadata().await else {
                 client
                     .update_response(&interaction.token)
-                    .content(Some("Error processing your request"))?
+                    .content(Some("Error processing your request"))
                     .await?;
+                continue;
+            };
+
+            let Some(call_lock) = ctx.songbird.get(guild_id) else {
+                tracing::error!("Bami is not in a voice channel");
+                bail!("Bami is not in a voice channel");
+            };
+
+            let track;
+            {
+                let mut call = call_lock.lock().await;
+                track = call.enqueue_input(src.clone().into()).await;
             }
+
+            ctx.client
+                .create_message(interaction.channel.as_ref().unwrap().id)
+                .embeds(&vec![
+                    EmbedBuilder::new()
+                        .color(0xf04628)
+                        .title(metadata.title.as_ref().unwrap())
+                        .url(metadata.source_url.as_ref().unwrap())
+                        .thumbnail(ImageSource::url(metadata.thumbnail.as_ref().unwrap()).unwrap())
+                        .description(format!(
+                            "Requested by {}",
+                            interaction.author().unwrap().mention(),
+                        ))
+                        .build(),
+                ])
+                .await
+                .unwrap();
+
+            track
+                .add_event(
+                    Event::Track(TrackEvent::Playable),
+                    TrackPlayableHandler {
+                        channel_id: interaction.channel.as_ref().unwrap().id,
+                        metadata: metadata.clone(),
+                        user: interaction.author().unwrap().id,
+                        ctx: ctx.clone(),
+                    },
+                )
+                .unwrap();
+
+            tracing::info!("Queued track {}", &metadata.title.unwrap())
         }
 
         client
             .update_response(&interaction.token)
-            .content(Some(format!("Qeueued {} songs", to_queue.len()).as_str()))?
+            .content(Some(format!("Qeueued {} songs", to_queue.len()).as_str()))
             .await?;
 
         Ok(())
