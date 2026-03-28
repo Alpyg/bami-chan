@@ -34,7 +34,6 @@ static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 pub type Context = Arc<ContextRef>;
 
-#[derive(Debug)]
 pub struct ContextRef {
     pub client: Arc<HttpClient>,
     pub cache: Arc<InMemoryCache>,
@@ -71,7 +70,11 @@ async fn main() -> anyhow::Result<()> {
     let application = http.current_user_application().await?.model().await?;
     let interaction_client = http.interaction(application.id);
 
-    tracing::info!("logged as {} with ID {}", application.name, application.id);
+    tracing::info!(
+        "logged in as {} with ID {}",
+        application.name,
+        application.id
+    );
 
     // TODO: Change to global later
     if let Err(error) = interaction_client
@@ -138,15 +141,24 @@ async fn runner(mut shard: Shard, ctx: Context) {
             continue;
         };
 
-        match event {
-            Event::GatewayClose(_) if SHUTDOWN.load(Ordering::Relaxed) => break,
-            _ => {}
-        }
-
-        ctx.cache.update(&event);
-        ctx.songbird.process(&event).await;
-
-        tracing::info!(kind = ?event.kind(), shard = ?shard.id().number(), "received event");
-        tokio::spawn(process_interactions(event, ctx.clone()));
+        tokio::spawn({
+            let ctx = ctx.clone();
+            async move {
+                handle_event(event, ctx).await;
+            }
+        });
     }
+}
+
+async fn handle_event(event: Event, ctx: Context) {
+    ctx.cache.update(&event);
+    ctx.songbird.process(&event).await;
+
+    match event {
+        Event::GatewayClose(_) if SHUTDOWN.load(Ordering::Relaxed) => return,
+        _ => {}
+    }
+
+    tracing::info!(kind = ?event.kind(), "received event");
+    tokio::spawn(process_interactions(event, ctx.clone()));
 }

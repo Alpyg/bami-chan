@@ -146,18 +146,16 @@ impl PlayCommand {
 
             ctx.client
                 .create_message(interaction.channel.as_ref().unwrap().id)
-                .embeds(&vec![
-                    EmbedBuilder::new()
-                        .color(0xf04628)
-                        .title(metadata.title.as_ref().unwrap())
-                        .url(metadata.source_url.as_ref().unwrap())
-                        .thumbnail(ImageSource::url(metadata.thumbnail.as_ref().unwrap()).unwrap())
-                        .description(format!(
-                            "Requested by {}",
-                            interaction.author().unwrap().mention(),
-                        ))
-                        .build(),
-                ])
+                .embeds(&[EmbedBuilder::new()
+                    .color(0xf04628)
+                    .title(metadata.title.as_ref().unwrap())
+                    .url(metadata.source_url.as_ref().unwrap())
+                    .thumbnail(ImageSource::url(metadata.thumbnail.as_ref().unwrap()).unwrap())
+                    .description(format!(
+                        "Requested by {}",
+                        interaction.author().unwrap().mention(),
+                    ))
+                    .build()])
                 .await
                 .unwrap();
 
